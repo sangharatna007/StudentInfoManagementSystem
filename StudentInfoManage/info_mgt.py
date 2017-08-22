@@ -155,7 +155,7 @@ def add_new_student_info(stud_info, mysql_connection):
 # 删除学生信息
 def del_student_info(stud_id,mysql_connection):
     # 首先需要查询要删除的信息是否存在于数据库中。
-    query_cmd = 'SELECT * FROM tbl_stud_info WHERE stud_id = {}'.format(repr(stud_id))
+    query_cmd = 'SELECT * FROM tbl_student_info WHERE stud_id = {};'.format(repr(stud_id))
     try:
         with mysql_connection.cursor() as cursor:
             query_result = cursor.execute(query_cmd)
@@ -165,17 +165,34 @@ def del_student_info(stud_id,mysql_connection):
     if query_result:
         print('已经查询到该生信息。')
 
-    del_cmd = 'DELETE FROM tbl_stud_info where stud_id = {}'.format(repr(stud_id))
-    try:
-        with mysql_connection.cursor() as cursor:
-            cursor.execute(del_cmd)
-    except:
-        print('删除学生信息失败，请重新操作。')
-        del_student_info(stud_id,mysql_connection)
+    del_cmd = 'DELETE FROM tbl_student_info where stud_id = {};'.format(repr(stud_id))
+    while True:
+        weather_to_del = input('确定要删除学生信息吗？[y:确定删除/n:不要删除]：')
+        if weather_to_del.strip() in ['y', 'Y']:
+            try:
+                with mysql_connection.cursor() as cursor:
+                    cursor.execute(del_cmd)
+            except:
+                print('删除学生信息失败，请重新操作。')
+                del_student_info(stud_id,mysql_connection)
+            print('删除学生信息成功。')
+            return 1
+        elif weather_to_del.strip() in ['n', 'N']:
+            print('删除操作已经取消。')
+            return 0
+        else:
+            print('输入错误，请重新输入。')
+
+
 
 # 修改学生信息
-def mod_student_info(mysql_connection):
-    pass
+def mod_student_info(stud_id, mysql_connection):
+    # 首先查询输入的信息是否存在
+    query_result = query_student_info(1, mysql_connection)
+    if query_result:
+        print('信息查询成功。')
+    else:
+        print('要修改的信息不存在，请重新确认。')
 
 
 # 查询学生信息
@@ -213,6 +230,7 @@ def logout_student_manage_system(mysql_connection):
 
 # 打印帮助
 def print_help_info():
+    print(' \n' * 2)
     print('#'*10 + ' 学生成绩管理系统V1.0 ' + '#'*10)
     print(' ' * 5 + '1：添加学生信息')
     print(' ' * 5 + '2：删除学生信息' + ' ' * 10)
