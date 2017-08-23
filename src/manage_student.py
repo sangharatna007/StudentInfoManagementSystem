@@ -13,16 +13,19 @@
 
 
 from StudentInfoManage import info_mgt
+from pymysql import connect, cursors
 
 
-#打印一下使用帮助
-info_mgt.print_help_info()
+# 登录系统
+mysql_connection = connect(
+    host = '192.168.0.104',
+    user = 'sa',
+    password = '123456',
+    db = 'stud_info',
+    charset = 'utf8mb4',
+    cursorclass = cursors.DictCursor
 
-#需要用户输入功能代码
-while True:
-    try:
-        user_input = int(input('请输入您选择的操作代码：').strip())
-    except ValueError:
-        print('您输入的不是1-6之间的数字，请重新输入')
-    if user_input == 1:
-        pass
+)
+# 打印使用帮助，提醒用户操作选项
+info_mgt.print_help_info(mysql_connection)
+

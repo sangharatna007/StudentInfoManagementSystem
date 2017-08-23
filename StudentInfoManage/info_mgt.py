@@ -110,30 +110,20 @@ def get_stud_info(mysql_connection):
             print('学生电话号码输入错误，请重新输入。')
         else:
             break
-    # while True:
-    #     try:
-    #         whether_continue_input = input('是否继续输入学生信息[y:是/n:否]：')
-    #         if whether_continue_input not in ['y', 'Y', 'N', 'n']:
-    #             print("输入的操作代码有误，请检查[y:是/n:否]。")
-    #         else:
-    #             if whether_continue_input in ['y', 'Y']:
-    #                 get_stud_info()
-    #             else:
-    #                 print('输入学生信息完毕。')
-    #                 break
-    #     except:
-    #         print('输入的代码有误，请重新输入。')
 
     return stud_info
 
 
 # 增加学生信息
-def add_new_student_info(stud_info, mysql_connection):
-    # 身份证号码是唯一的，可以用身份证号码作为主键
+def add_new_student_info(mysql_connection):
     # 需要判定正在添加的学生信息是否已经存在于数据库中
-    if query_student_info(2, stud_info['stud_id_card_num'], mysql_connection):
-        print('该学生信息已经存在于系统中，请重新核对并输入。')
-        get_stud_info(mysql_connection)
+    stud_info = get_stud_info(mysql_connection)
+    query_cmd = 'SELECT * FROM tbl_student_info where stud_id_card_num = {}'.format(repr(stud_info['stud_id_card_num']))
+    with mysql_connection.cursor() as cursor:
+        res = cursor.execute(query_cmd)
+    if res:
+        print('要添加的学生的身份证信息已经在数据库中，请重新核对，查询到的学生信息如下:')
+        print(pandas.DataFrame(cursor.fetchall()))
     else:
         insert_cmd = 'INSERT INTO tbl_student_info VALUES(null, {}, {}, {}, {}, \
         {}, {}, {});'.format(
@@ -154,17 +144,25 @@ def add_new_student_info(stud_info, mysql_connection):
             print('保存学生信息成功。')
 
 # 删除学生信息
-def del_student_info(stud_id,mysql_connection):
+def del_student_info(mysql_connection):
+
+    # 让用户输入学生ID，根据ID删除学生信息。
+    while True:
+        try:
+            stud_id = int(input('请输入需要删除的学生的ID：').strip())
+            break
+        except ValueError:
+            print('输入错误，学生ID为1-8位数之间的整数，请重新输入。')
+
     # 首先需要查询要删除的信息是否存在于数据库中。
     query_cmd = 'SELECT * FROM tbl_student_info WHERE stud_id = {};'.format(repr(stud_id))
-    try:
-        with mysql_connection.cursor() as cursor:
-            query_result = cursor.execute(query_cmd)
-    except:
-        print('查询学生信息失败，请重新操作。')
-        del_student_info(stud_id,mysql_connection)
+
+    with mysql_connection.cursor() as cursor:
+        query_result = cursor.execute(query_cmd)
+
     if query_result:
-        print('已经查询到该生信息。')
+        print('已经查询到该生信息。查询到的结果如下：')
+        print(pandas.DataFrame(cursor.fetchall()))
 
     del_cmd = 'DELETE FROM tbl_student_info where stud_id = {};'.format(repr(stud_id))
     while True:
@@ -175,7 +173,7 @@ def del_student_info(stud_id,mysql_connection):
                     cursor.execute(del_cmd)
             except:
                 print('删除学生信息失败，请重新操作。')
-                del_student_info(stud_id,mysql_connection)
+                del_student_info(mysql_connection)
             print('删除学生信息成功。')
             return 1
         elif weather_to_del.strip() in ['n', 'N']:
@@ -187,14 +185,20 @@ def del_student_info(stud_id,mysql_connection):
 
 
 # 修改学生信息
-def mod_student_info(stud_id, mysql_connection):
+def mod_student_info(mysql_connection):
+
+    # 让用户输入学生ID，根据ID删除学生信息。
+    while True:
+        try:
+            stud_id = int(input('请输入需要修改信息的学生的ID：').strip())
+            break
+        except ValueError:
+            print('输入错误，学生ID为1-8位数之间的整数，请重新输入。')
+
     # 首先查询输入的信息是否存在
     query_cmd = 'SELECT * FROM tbl_student_info where stud_id = {};'.format(repr(stud_id))
-    try:
-        with mysql_connection.cursor() as cursor:
-            query_result = cursor.execute(query_cmd)
-    except:
-        print('系统异常，无法查询该生信息。')
+    with mysql_connection.cursor() as cursor:
+        query_result = cursor.execute(query_cmd)
 
     if query_result:
         print('查询学生信息成功，查询到的信息如下：')
@@ -203,7 +207,7 @@ def mod_student_info(stud_id, mysql_connection):
     else:
         print('没有查询到该生信息，请重新核对。')
         return 0
-
+    print('请输入修改后的学生信息：')
     new_stud_info = get_stud_info(mysql_connection)
     update_cmd = ("UPDATE tbl_student_info set stud_name = {}, stud_age = {}, stud_sex = {}, stud_racial = {}, " +
                   "stud_address = {}, stud_phone = {}, stud_id_card_num = {} WHERE stud_id = {};").format(
@@ -231,25 +235,32 @@ def mod_student_info(stud_id, mysql_connection):
 
 
 # 查询学生信息
-# 输入参数：
-# para_flag:标志参数，标志第二个参数的含义，如果为1：则代表是按照学号进行查询，如果是2，则按照身份证号码查询。
-# parameter:学号或者身份证号
-# mysql_connection:数据库连接
-# 返回结果为1，表明已经存在，返回结果为0，表明不存在，返回值为2，表明出错。
-def query_student_info(para_flag, parameter, mysql_connection):
-    if para_flag == 1:
-        query_cmd = 'SELECT * FROM tbl_student_info where student_id = {}'.format(repr(parameter))
-    elif para_flag == 2:
-        query_cmd = 'SELECT * FROM tbl_student_info where stud_id_card_num = {}'.format(repr(parameter))
-    else:
-        print("查询参数错误，请检查。")
-        return 2
+# 输入参数：mysql_connection:数据库连接
+# 支持按照学号查询或者身份证号码查询
+# 返回结果为查询出来学生信息的列表。
+def query_student_info(mysql_connection):
+    while True:
+        try:
+            query_info = int(input('请输入要查询学生的学生ID或者身份证号码：'))
+            break
+        except ValueError:
+            print('您输入的信息有误，请重新输入，请按照提示输入要查询学生的学生ID或者身份证号码。')
+
+    query_cmd1 = 'SELECT * FROM tbl_student_info where stud_id = {}'.format(repr(query_info))
+    query_cmd2 = 'SELECT * FROM tbl_student_info where stud_id_card_num = {}'.format(repr(query_info))
     with mysql_connection.cursor() as cursor:
-        query_result = cursor.execute(query_cmd)
-    if query_result == 1:
-        return 1
-    else:
-        return 0
+        res1 = cursor.execute(query_cmd1)
+        if res1:
+            query_result = cursor.fetchall()
+            return query_result
+        else:
+            res2 = cursor.execute(query_cmd2)
+            if res2:
+                query_result = cursor.fetchall()
+                print(pandas.DataFrame(query_result))
+                return query_result
+
+
 
 
 
@@ -264,35 +275,71 @@ def logout_student_manage_system(mysql_connection):
 
 
 # 打印帮助
-def print_help_info():
+def print_help_info(mysql_connection):
     print(' \n' * 2)
     print('#'*10 + ' 学生成绩管理系统V1.0 ' + '#'*10)
-    print(' ' * 5 + '1：添加学生信息')
-    print(' ' * 5 + '2：删除学生信息' + ' ' * 10)
-    print(' ' * 5 + '3：修改学生信息' + ' ' * 10)
-    print(' ' * 5 + '4：查询学生信息' + ' ' * 10)
-    print(' ' * 5 + '5：退出管理系统' + ' ' * 10)
+    print(' ' * 5 + '1：登录管理系统' + ' ' * 10)
+    print(' ' * 5 + '2：添加学生信息' + ' ' * 10)
+    print(' ' * 5 + '3：删除学生信息' + ' ' * 10)
+    print(' ' * 5 + '4：修改学生信息' + ' ' * 10)
+    print(' ' * 5 + '5：查询学生信息' + ' ' * 10)
+    print(' ' * 5 + '6：退出管理系统' + ' ' * 10)
     print('#' * 10 + ' 学生成绩管理系统V1.0 ' + '#' * 10)
     print(' \n' * 2)
+    choose_a_operation(mysql_connection)
 
 
 # 选择一项功能
 def choose_a_operation(mysql_connection):
-    if mysql_connection._closed == False:
+    if mysql_connection._closed == True:
+        print('您尚未登录系统，登录后才能做其他操作。')
+        login_student_manage_system()
+    else:
         while True:
             try:
                 user_input_code = int(input('请输入您的选择：').strip())
             except ValueError:
                 print('您输入的不是 1-5之间的数字，请重新输入。')
             if user_input_code == 1:
-                login_student_manage_system(mysql_connection)
+                if mysql_connection._closed == False:
+                    print('已经登录系统。')
+                else:
+                    mysql_connection = login_student_manage_system()
             elif user_input_code == 2:
-                pass
+                add_new_student_info(mysql_connection)
             elif user_input_code == 3:
-                pass
+                del_student_info(mysql_connection)
             elif user_input_code == 4:
-                pass
+                mod_student_info(mysql_connection)
             elif user_input_code == 5:
-                pass
+                print(query_student_info(mysql_connection))
+            elif user_input_code == 6:
+                logout_student_manage_system(mysql_connection)
+                return 0
             else:
                 print('您输入的不是 1-5之间的数字，请重新输入。')
+
+
+# 导出学生信息到excel表格中
+def export_info_to_excel(mysql_connection):
+    # 让用户定义导出的学号的范围
+    while True:
+        while True:
+            try:
+                stud_id_start = int(input('请输入需要导出学生信息的起始学号：').strip())
+                break
+            except ValueError:
+                print('您输入的学号有误，请输入1-8位数字的学号:')
+        while True:
+            try:
+                stud_id_end = int(input('请输入需要导出学生信息的终止学号：').strip())
+                break
+            except ValueError:
+                print('您输入的学号有误，请输入1-8位数字的学号:')
+        if stud_id_start > stud_id_end:
+            print('起始学号大于结束学号，无法导出，请重新输入。')
+        elif stud_id_start == stud_id_end:
+            break
+        else:
+            break
+    # 用户也可以自定义需要导出的学号
