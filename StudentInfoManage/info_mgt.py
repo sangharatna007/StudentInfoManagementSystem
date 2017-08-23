@@ -13,6 +13,7 @@
 
 
 from pymysql import connect, cursors
+import pandas
 
 
 # 登录学生管理系统
@@ -132,7 +133,7 @@ def add_new_student_info(stud_info, mysql_connection):
     # 需要判定正在添加的学生信息是否已经存在于数据库中
     if query_student_info(2, stud_info['stud_id_card_num'], mysql_connection):
         print('该学生信息已经存在于系统中，请重新核对并输入。')
-        get_stud_info()
+        get_stud_info(mysql_connection)
     else:
         insert_cmd = 'INSERT INTO tbl_student_info VALUES(null, {}, {}, {}, {}, \
         {}, {}, {});'.format(
@@ -188,16 +189,50 @@ def del_student_info(stud_id,mysql_connection):
 # 修改学生信息
 def mod_student_info(stud_id, mysql_connection):
     # 首先查询输入的信息是否存在
-    query_result = query_student_info(1, mysql_connection)
+    query_cmd = 'SELECT * FROM tbl_student_info where stud_id = {};'.format(repr(stud_id))
+    try:
+        with mysql_connection.cursor() as cursor:
+            query_result = cursor.execute(query_cmd)
+    except:
+        print('系统异常，无法查询该生信息。')
+
     if query_result:
-        print('信息查询成功。')
+        print('查询学生信息成功，查询到的信息如下：')
+        print(pandas.DataFrame(cursor.fetchall()))
+
     else:
-        print('要修改的信息不存在，请重新确认。')
+        print('没有查询到该生信息，请重新核对。')
+        return 0
+
+    new_stud_info = get_stud_info(mysql_connection)
+    update_cmd = ("UPDATE tbl_student_info set stud_name = {}, stud_age = {}, stud_sex = {}, stud_racial = {}, " +
+                  "stud_address = {}, stud_phone = {}, stud_id_card_num = {} WHERE stud_id = {};").format(
+        repr(new_stud_info['stud_name']),
+        repr(new_stud_info['stud_age']),
+        repr(new_stud_info['stud_sex']),
+        repr(new_stud_info['stud_racial']),
+        repr(new_stud_info['stud_address']),
+        repr(new_stud_info['stud_phone']),
+        repr(new_stud_info['stud_id_card_num']),
+        repr(stud_id)
+        )
+    print(update_cmd)
+    try:
+        with mysql_connection.cursor() as cursor:
+            update_result = cursor.execute(update_cmd)
+    except:
+        print('系统异常，无法修改该生信息。')
+    print('修改学生信息成功。修改后的信息如下。')
+    with mysql_connection.cursor() as cursor:
+        result = cursor.execute(query_cmd)
+        if result:
+            print(pandas.DataFrame(cursor.fetchall()))
+    return 1
 
 
 # 查询学生信息
 # 输入参数：
-# para_flag:标志第二个参数的含义，如果为1：则代表是按照学号进行查询，如果是2，则按照身份证号码查询。
+# para_flag:标志参数，标志第二个参数的含义，如果为1：则代表是按照学号进行查询，如果是2，则按照身份证号码查询。
 # parameter:学号或者身份证号
 # mysql_connection:数据库连接
 # 返回结果为1，表明已经存在，返回结果为0，表明不存在，返回值为2，表明出错。
