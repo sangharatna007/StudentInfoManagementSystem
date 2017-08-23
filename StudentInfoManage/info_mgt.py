@@ -274,3 +274,25 @@ def print_help_info():
     print(' ' * 5 + '5：退出管理系统' + ' ' * 10)
     print('#' * 10 + ' 学生成绩管理系统V1.0 ' + '#' * 10)
     print(' \n' * 2)
+
+
+# 选择一项功能
+def choose_a_operation(mysql_connection):
+    if mysql_connection._closed == False:
+        while True:
+            try:
+                user_input_code = int(input('请输入您的选择：').strip())
+            except ValueError:
+                print('您输入的不是 1-5之间的数字，请重新输入。')
+            if user_input_code == 1:
+                login_student_manage_system(mysql_connection)
+            elif user_input_code == 2:
+                pass
+            elif user_input_code == 3:
+                pass
+            elif user_input_code == 4:
+                pass
+            elif user_input_code == 5:
+                pass
+            else:
+                print('您输入的不是 1-5之间的数字，请重新输入。')

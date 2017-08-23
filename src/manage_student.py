@@ -18,10 +18,11 @@ from StudentInfoManage import info_mgt
 #打印一下使用帮助
 info_mgt.print_help_info()
 
-#登录系统模块
-print('请先登录系统：')
-mysql_connection = info_mgt.login_student_manage_system()
-
-if not mysql_connection._closed:
-    info_mgt.mod_student_info('11', mysql_connection)
-    info_mgt.logout_student_manage_system(mysql_connection)
+#需要用户输入功能代码
+while True:
+    try:
+        user_input = int(input('请输入您选择的操作代码：').strip())
+    except ValueError:
+        print('您输入的不是1-6之间的数字，请重新输入')
+    if user_input == 1:
+        pass
