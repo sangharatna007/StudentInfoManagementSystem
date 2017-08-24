@@ -14,6 +14,7 @@
 
 from pymysql import connect, cursors
 import pandas
+import time
 
 
 # 登录学生管理系统
@@ -283,7 +284,8 @@ def print_help_info(mysql_connection):
     print(' ' * 5 + '3：删除学生信息' + ' ' * 10)
     print(' ' * 5 + '4：修改学生信息' + ' ' * 10)
     print(' ' * 5 + '5：查询学生信息' + ' ' * 10)
-    print(' ' * 5 + '6：退出管理系统' + ' ' * 10)
+    print(' ' * 5 + '6：导出信息报表' + ' ' * 10)
+    print(' ' * 5 + '7：退出管理系统' + ' ' * 10)
     print('#' * 10 + ' 学生成绩管理系统V1.0 ' + '#' * 10)
     print(' \n' * 2)
     choose_a_operation(mysql_connection)
@@ -314,6 +316,8 @@ def choose_a_operation(mysql_connection):
             elif user_input_code == 5:
                 print(query_student_info(mysql_connection))
             elif user_input_code == 6:
+                export_info_to_excel(mysql_connection)
+            elif user_input_code == 7:
                 logout_student_manage_system(mysql_connection)
                 return 0
             else:
@@ -323,23 +327,77 @@ def choose_a_operation(mysql_connection):
 # 导出学生信息到excel表格中
 def export_info_to_excel(mysql_connection):
     # 让用户定义导出的学号的范围
+    print('使用帮助：如果您需要输入一段连续的学号范围内的学生信息，请输入1;\
+    如果您需要导出学号不连续学生的学生,请输入2。')
     while True:
-        while True:
-            try:
-                stud_id_start = int(input('请输入需要导出学生信息的起始学号：').strip())
-                break
-            except ValueError:
-                print('您输入的学号有误，请输入1-8位数字的学号:')
-        while True:
-            try:
-                stud_id_end = int(input('请输入需要导出学生信息的终止学号：').strip())
-                break
-            except ValueError:
-                print('您输入的学号有误，请输入1-8位数字的学号:')
-        if stud_id_start > stud_id_end:
-            print('起始学号大于结束学号，无法导出，请重新输入。')
-        elif stud_id_start == stud_id_end:
+        try:
+            choice = int(input('请输入您的选择：').strip())
+        except ValueError:
+            print('您的输入不符合系统的要求，')
+            print('使用帮助：如果您需要输入一段连续的学号范围内的学生信息，请输入1;\
+                如果您需要导出学号不连续学生的学生,请输入2。')
+            continue
+        if choice in [1, 2]:
             break
-        else:
-            break
-    # 用户也可以自定义需要导出的学号
+
+    if choice == 1:
+
+        while True:
+
+            while True:
+                try:
+                    stud_id_start = int(input('请输入需要导出学生信息的起始学号：').strip())
+                    break
+                except ValueError:
+                    print('您输入的学号有误，请输入1-8位数字的学号。')
+
+            while True:
+                try:
+                    stud_id_end = int(input('请输入需要导出学生信息的终止学号：').strip())
+                    break
+                except ValueError:
+                    print('您输入的学号有误，请输入1-8位数字的学号。')
+
+            if stud_id_start > stud_id_end:
+                print('起始学号大于结束学号，无法导出，请重新输入。')
+            else:
+                stud_id_list = [id for id in range(stud_id_start, stud_id_end + 1)]
+                break
+
+        if len(stud_id_list):
+            stud_info_to_export = []
+
+            for stud_id in stud_id_list:
+                query_cmd = "SELECT * FROM tbl_student_info WHERE stud_id = {};".format(repr(stud_id))
+                with mysql_connection.cursor() as cursor:
+                    cursor.execute(query_cmd)
+                    if len(cursor.fetchall()):
+                        stud_info_to_export.extend(cursor.fetchall())
+
+            dt = pandas.DataFrame(stud_info_to_export)
+            export_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+            dt.to_excel('export_'+ export_time + '.xlsx')
+            print('导出学生信息完成。')
+
+    if choice == 2:
+        stud_id_list = (input('请依次输入您需要导出信息的学生的学号，学号之间用英文逗号分割：').strip().split(','))
+        stud_id_after_filter = []
+        for each_id in stud_id_list:
+            try:
+                stud_id_after_filter.append(int(each_id))
+            except:
+                print('这个学号' + str(each_id) + '无效。')
+
+        if len(stud_id_after_filter):
+            stud_info_to_export = []
+
+            for stud_id in stud_id_after_filter:
+                query_cmd = "SELECT * FROM tbl_student_info WHERE stud_id = {};".format(repr(stud_id))
+                with mysql_connection.cursor() as cursor:
+                    cursor.execute(query_cmd)
+                    if len(cursor.fetchall()):
+                        stud_info_to_export.extend(cursor.fetchall())
+            dt = pandas.DataFrame(stud_info_to_export)
+            export_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+            dt.to_excel('export_'+ export_time + '.xlsx')
+            print('导出学生信息完成。')
